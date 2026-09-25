@@ -15,14 +15,9 @@ ENV PATH=/opt/data730/.pixi/envs/default/bin:$PATH
 RUN python -m ipykernel install --sys-prefix --name python3 --display-name "Python 3 (pixi)" \
  && R -e 'IRkernel::installspec(sys_prefix = TRUE, displayname = "R (pixi)")'
 
-# Prune things nothing at runtime needs: static libs, man/info pages, package
-# docs and vignettes, test suites, bytecode caches (regenerated lazily).
-RUN cd /opt/data730/.pixi/envs/default \
- && find . -name '*.a' -delete \
- && rm -rf share/man share/info share/doc share/gtk-doc \
- && rm -rf lib/R/library/*/doc lib/R/library/*/tests \
- && find lib/python3.*/site-packages -type d -name tests -prune -exec rm -rf {} + \
- && find . -type d -name __pycache__ -prune -exec rm -rf {} +
+# Strip the compiler toolchain, pandoc, docs, tests and other build-only files.
+COPY prune.py /tmp/prune.py
+RUN PRUNE_PREFIX=/opt/data730/.pixi/envs/default python /tmp/prune.py
 
 # Stage 2: runtime image. Devcontainer base gives us git, sudo and the vscode
 # user that Codespaces expects.
